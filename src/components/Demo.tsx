@@ -25,6 +25,9 @@ import { Header } from "~/components/ui/Header";
 import { Footer } from "~/components/ui/Footer";
 import { USE_WALLET, APP_NAME } from "~/lib/constants";
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
+import BillSplitApp from "./BillSplit";
+import { supabase } from "~/lib/supabas";
+import { PaymentComponent } from "./PayButton";
 
 
 export type Tab = "home" | "actions" | "context" | "wallet";
@@ -32,6 +35,7 @@ export type Tab = "home" | "actions" | "context" | "wallet";
 interface NeynarUser {
   fid: number;
   score: number;
+  custody_address: string
 }
 
 export default function Demo(
@@ -43,7 +47,12 @@ export default function Demo(
   const [txHash, setTxHash] = useState<string | null>(null);
   const [sendNotificationResult, setSendNotificationResult] = useState("");
   const [copied, setCopied] = useState(false);
+
   const [neynarUser, setNeynarUser] = useState<NeynarUser | null>(null);
+  const [invoiceId, setInvoiceId] = useState('');
+  const [invoiceData, setInvoiceData] = useState<any[] | null>(null);
+  const [searchError, setSearchError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { setFrameReady, isFrameReady } = useMiniKit();
 
   const { address, isConnected } = useAccount();
@@ -64,9 +73,11 @@ export default function Demo(
         try {
           const response = await fetch(`/api/users?fids=${context.user.fid}`);
           const data = await response.json();
+          console.log(data, 'data', context)
           if (data.users?.[0]) {
             setNeynarUser(data.users[0]);
           }
+          console.log(neynarUser)
         } catch (error) {
           console.error("Failed to fetch Neynar user object:", error);
         }
@@ -82,6 +93,28 @@ export default function Demo(
     isError: isSendTxError,
     isPending: isSendTxPending,
   } = useSendTransaction();
+
+
+
+  const fetchInvoiceById = async () => {
+    setLoading(true);
+    setSearchError('');
+    setInvoiceData(null);
+
+    const { data, error } = await supabase
+      .from('payment_requests')
+      .select('*')
+      .eq('id', invoiceId)
+      .single(); // Expecting 1 match
+
+    if (error) {
+      console.error(error);
+      setSearchError('No invoice found for this ID.');
+    } else {
+      setInvoiceData(data);
+    }
+    setLoading(false);
+  };
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({
@@ -207,6 +240,7 @@ export default function Demo(
         paddingLeft: context?.client.safeAreaInsets?.left ?? 0,
         paddingRight: context?.client.safeAreaInsets?.right ?? 0,
       }}
+      className="bg-gray-900"
     >
       <div className="mx-auto py-2 px-4 pb-20">
         <Header neynarUser={neynarUser} />
@@ -215,7 +249,10 @@ export default function Demo(
 
         {activeTab === "home" && (
           <div className="flex items-center justify-center h-[calc(100vh-200px)] px-6">
-            <div className="text-center w-full max-w-md mx-auto">c
+            <div className="text-center w-full max-w-md mx-auto">
+              <BillSplitApp address={neynarUser?.custody_address ||
+                ''
+              } />
             </div>
           </div>
         )}
@@ -287,17 +324,48 @@ export default function Demo(
         )}
 
         {activeTab === "context" && (
-          <div className="mx-6">
+          <div className="mx-6 h-full">
             <h2 className="text-lg font-semibold mb-2 text-foreground">
               Context
             </h2>
-            <div className="p-4 bg-card text-card-foreground rounded-lg border border-border">
-              <pre className="font-mono text-xs whitespace-pre-wrap break-words w-full">
-                {JSON.stringify(context, null, 2)}
-              </pre>
+
+            {/* Search Input */}
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={invoiceId}
+                onChange={(e) => setInvoiceId(e.target.value)}
+                placeholder="Enter Invoice ID"
+                className="flex-1 p-2 border border-gray-700 bg-gray-800 text-gray-100 rounded"
+              />
+              <button
+                onClick={fetchInvoiceById}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Search
+              </button>
             </div>
+
+            {/* Result */}
+            <div className="p-4 bg-card text-card-foreground rounded-lg border border-border">
+              {loading && <p>Loading...</p>}
+              {searchError && <p className="text-red-400">{searchError}</p>}
+              {invoiceData && (
+                <>
+                  <p className="text-green-400 font-semibold mb-4">
+                    Your Pay Amount: ${invoiceData?.split_amount.toFixed(2)}
+                  </p>
+                  <PaymentComponent amount={invoiceData?.split_amount.toFixed(2)} address={invoiceData?.address || ''} />
+                </>
+              )}
+
+            </div>
+
+
           </div>
         )}
+
+
 
         {activeTab === "wallet" && USE_WALLET && (
           <div className="space-y-3 px-6 w-full max-w-md mx-auto">
