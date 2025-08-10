@@ -19,8 +19,8 @@ export function Header({ neynarUser }: HeaderProps) {
 
   return (
     <div className="relative">
-      <div className="mb-1 py-2 px-3 bg-card text-card-foreground rounded-lg flex items-center justify-between border-[3px] border-double border-primary">
-        <div className="text-lg font-light">Welcome to {APP_NAME}!</div>
+      <div className="mb-1 py-2 px-3 text-card-foreground flex items-center justify-between">
+        <div className="text-lg font-light"></div>
         {context?.user && (
           <div
             className="cursor-pointer"

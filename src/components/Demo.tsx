@@ -24,6 +24,8 @@ import { useMiniApp } from "@neynar/react";
 import { Header } from "~/components/ui/Header";
 import { Footer } from "~/components/ui/Footer";
 import { USE_WALLET, APP_NAME } from "~/lib/constants";
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
+
 
 export type Tab = "home" | "actions" | "context" | "wallet";
 
@@ -42,6 +44,7 @@ export default function Demo(
   const [sendNotificationResult, setSendNotificationResult] = useState("");
   const [copied, setCopied] = useState(false);
   const [neynarUser, setNeynarUser] = useState<NeynarUser | null>(null);
+  const { setFrameReady, isFrameReady } = useMiniKit();
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -167,6 +170,13 @@ export default function Demo(
     );
   }, [sendTransaction]);
 
+  useEffect(() => {
+    if (!isFrameReady) {
+      setFrameReady();
+    }
+  }, [setFrameReady, isFrameReady]);
+
+
   const signTyped = useCallback(() => {
     signTypedData({
       domain: {
@@ -183,6 +193,7 @@ export default function Demo(
       primaryType: "Message",
     });
   }, [chainId, signTypedData]);
+
 
   if (!isSDKLoaded) {
     return <div>Loading...</div>;
@@ -204,9 +215,7 @@ export default function Demo(
 
         {activeTab === "home" && (
           <div className="flex items-center justify-center h-[calc(100vh-200px)] px-6">
-            <div className="text-center w-full max-w-md mx-auto">
-              <p className="text-lg mb-2">Put your content here!</p>
-              <p className="text-sm text-gray-500">Powered by Neynar 🪐</p>
+            <div className="text-center w-full max-w-md mx-auto">c
             </div>
           </div>
         )}
@@ -219,8 +228,7 @@ export default function Demo(
                 text: "Check out this awesome frame @1 @2 @3! 🚀🪐",
                 bestFriends: true,
                 embeds: [
-                  `${process.env.NEXT_PUBLIC_URL}/share/${
-                    context?.user?.fid || ""
+                  `${process.env.NEXT_PUBLIC_URL}/share/${context?.user?.fid || ""
                   }`,
                 ],
               }}
@@ -356,8 +364,8 @@ export default function Demo(
                       {isConfirming
                         ? "Confirming..."
                         : isConfirmed
-                        ? "Confirmed!"
-                        : "Pending"}
+                          ? "Confirmed!"
+                          : "Pending"}
                     </div>
                   </div>
                 )}
@@ -482,8 +490,8 @@ function SendEth() {
             {isConfirming
               ? "Confirming..."
               : isConfirmed
-              ? "Confirmed!"
-              : "Pending"}
+                ? "Confirmed!"
+                : "Pending"}
           </div>
         </div>
       )}
