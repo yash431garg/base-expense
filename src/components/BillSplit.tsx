@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
-import { pay } from '@base-org/account';
-
+import { useMiniApp } from '@neynar/react';
 import { supabase } from '~/lib/supabas';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -24,7 +23,13 @@ interface PaymentRequest {
 }
 
 export default function BillSplitApp({ address }: { address: string }) {
+    const { context, isSDKLoaded } = useMiniApp();
     const [activeTab, setActiveTab] = useState<'create' | 'requests'>('create');
+    
+    // Debug logging
+    console.log('BillSplit - context:', context);
+    console.log('BillSplit - isSDKLoaded:', isSDKLoaded);
+    console.log('BillSplit - user fid:', context?.user?.fid);
     const [totalAmount, setTotalAmount] = useState('');
     const [description, setDescription] = useState('');
     const [friends, setFriends] = useState<Friend[]>([]);
@@ -89,40 +94,19 @@ export default function BillSplitApp({ address }: { address: string }) {
         setActiveTab('requests');
     };
 
-    // Handle payment for a request
-    const handlePayment = async (request: PaymentRequest, recipientAddress: string) => {
-        try {
-            const payment = await pay({
-                amount: request.splitAmount.toFixed(2),
-                to: recipientAddress, // Creator's wallet address
-                testnet: true,
-                payerInfo: {
-                    requests: [
-                        { type: 'email', optional: true },
-                        { type: 'name', optional: true }
-                    ]
-                }
-            });
 
-            console.log(`Payment sent! Transaction ID: ${payment.id}`);
-
-            // Update request status (in real app, verify on backend)
-            setPaymentRequests(prev =>
-                prev.map(req =>
-                    req.id === request.id
-                        ? { ...req, paidBy: [...req.paidBy, 'current-user'] }
-                        : req
-                )
-            );
-        } catch (error) {
-            console.error('Payment failed:', error);
-        }
-    };
 
     return (
         <div className="max-w-md mx-auto max-h-80 bg-gray-900 text-gray-100 overflow-scroll">
             {/* Header */}
 
+            {/* Wallet Connection Notice */}
+            {!context?.user?.fid && (
+                <div className="bg-yellow-900 border border-yellow-700 p-3 text-yellow-200 text-sm">
+                    <p className="font-medium mb-1">Farcaster Not Connected</p>
+                    <p>Please connect your Farcaster account to use this app.</p>
+                </div>
+            )}
 
             {/* Tab Navigation */}
             <div className="flex border-b border-gray-700">
@@ -320,30 +304,8 @@ export default function BillSplitApp({ address }: { address: string }) {
                 </div>
             )}
 
-            {/* Sample Payment Section */}
-            <div className=" border-t border-gray-700 p-4 max-w-md mx-auto bg-gray-900">
-                <div className="text-center">
-                    <p className="text-sm text-gray-300 mb-2">Sample: Pay your share</p>
-                    {/* <BasePayButton
-                        colorScheme="dark"
-                        onClick={() =>
-                            handlePayment(
-                                paymentRequests[0] || {
-                                    id: 'sample',
-                                    description: 'Dinner',
-                                    totalAmount: 50,
-                                    splitAmount: 12.5,
-                                    createdBy: 'Friend',
-                                    friends: [],
-                                    paidBy: [],
-                                    status: 'pending',
-                                },
-                                '0xRecipientAddress'
-                            )
-                        }
-                    /> */}
-                </div>
-            </div>
         </div>
     );
 }
+
+
